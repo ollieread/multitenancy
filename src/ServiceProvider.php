@@ -3,8 +3,8 @@ namespace Ollieread\Multitenancy;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use Ollieread\Multitenancy\Auth\Guard\SessionGuard;
-use Ollieread\Multitenancy\Auth\Provider\DatabaseUserProvider;
+use Ollieread\Multitenancy\Auth\DatabaseUserProvider;
+use Ollieread\Multitenancy\Auth\SessionGuard;
 use Ollieread\Multitenancy\Providers\Database;
 use Ollieread\Multitenancy\Providers\Eloquent;
 

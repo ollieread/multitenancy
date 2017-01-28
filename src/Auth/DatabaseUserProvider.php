@@ -1,5 +1,5 @@
 <?php
-namespace Ollieread\Multitenancy\Auth\Provider;
+namespace Ollieread\Multitenancy\Auth;
 
 use Illuminate\Auth\DatabaseUserProvider as OriginalProvider;
 use Ollieread\Multitenancy\Facades\Multitenancy;

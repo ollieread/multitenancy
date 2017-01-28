@@ -1,5 +1,5 @@
 <?php
-namespace Ollieread\Multitenancy\Auth\Guard;
+namespace Ollieread\Multitenancy\Auth;
 
 use Illuminate\Auth\SessionGuard as OriginalGuard;
 use Ollieread\Multitenancy\Facades\Multitenancy;

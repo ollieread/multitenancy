@@ -2,7 +2,7 @@
 
 [![Latest Stable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/stable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Total Downloads](https://poser.pugx.org/ollieread/laravel-multitenancy/downloads.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Latest Unstable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/unstable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![License](https://poser.pugx.org/ollieread/laravel-multitenancy/license.png)](https://packagist.org/packages/ollieread/laravel-multitenancy)
 
-- **Laravel**: 5.3
+- **Laravel**: 5.3 & 5.4
 - **Author**: Ollie Read 
 - **Author Homepage**: http://ollieread.com
 
@@ -14,7 +14,7 @@ The package itself works much in the same way as the default Auth library.
 Firstly you want to include this package in your composer.json file.
 
     "require": {
-        "ollieread/laravel-multitenancy": "dev-master"
+        "ollieread/laravel-multitenancy": "^2"
     }
     
 Now you'll want to update or install via composer.
@@ -83,6 +83,17 @@ There is a method for create route groups that should be part of the tenant syst
             dd($tenant);
         });
     });
+    
+It is worth noting that if this method is called inside a group that has the default `web` group, it'll error. You should instead wrap the `web` group routes in this, eg:
+
+    protected function mapWebRoutes()
+    {
+        Multitenancy::routes(function (Router $router) {
+            Route::middleware('web')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/web.php'));
+        });
+    }
     
 To generate a url for a tenant based route, you can use the following methods:
 

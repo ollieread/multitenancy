@@ -6,7 +6,7 @@
 - **Author**: Ollie Read 
 - **Author Homepage**: http://ollieread.com
 
-Laralve package for multitenancy using subdomain and/or domain based identification.
+Laravel package for multitenancy using subdomain and/or domain based identification.
 The package itself works much in the same way as the default Auth library.
 
 ## Installation ##

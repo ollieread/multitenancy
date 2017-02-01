@@ -45,6 +45,11 @@ class TenantManager
      */
     protected $tenant;
 
+    /**
+     * @var boolean
+     */
+    protected $primary = false;
+
     public function __construct($app)
     {
         $this->app = $app;
@@ -133,6 +138,16 @@ class TenantManager
     }
 
     /**
+     * Whether or not we currently have a tenant.
+     *
+     * @return bool
+     */
+    public function hasTenant()
+    {
+        return $this->tenant !== null;
+    }
+
+    /**
      * Retrieve the current tenant.
      *
      * @return \Ollieread\Multitenancy\Contracts\Tenant
@@ -140,6 +155,16 @@ class TenantManager
     public function tenant()
     {
         return $this->tenant;
+    }
+
+    /**
+     * Set the current tenant.
+     *
+     * @param Tenant $tenant
+     */
+    public function setTenant($tenant)
+    {
+        $this->tenant = $tenant;
     }
 
     /**
@@ -171,14 +196,14 @@ class TenantManager
     public function process(Request $request)
     {
         $identifier = $request->route()->parameter('_multitenant_');
-        $primary = false;
+        $this->primary = false;
 
         if (strpos($identifier, $this->config['domain']) !== false) {
             $identifier = str_replace('.'.$this->config['domain'], '', $identifier);
-            $primary = true;
+            $this->primary = true;
         }
 
-        $this->tenant = $this->provider()->retrieveByIdentifier($identifier, $primary);
+        $this->tenant = $this->provider()->retrieveByIdentifier($identifier, $this->primary);
 
         if (! $this->tenant) {
             throw new InvalidTenantException('Invalid Tenant \''.$identifier.'\'');
@@ -202,19 +227,21 @@ class TenantManager
     }
 
     /**
-     * Retrieve a URL for the current tenant.
+     * Returns whether or not the current tenant is identified by the primary identifier. Assume that if there is a tenant
+     * and this is false, that they're using the secondary identifier.
      *
-     * @param null  $path
-     * @param array $parameters
-     * @param null  $secure
-     *
-     * @return \Illuminate\Contracts\Routing\UrlGenerator|string
+     * @return bool
      */
-    public function url($path = null, $parameters = [], $secure = null)
+    public function isPrimary()
     {
-        return url($path, array_merge([$this->getIdentifier()], $parameters), $secure);
+        return $this->primary;
     }
 
+    /**
+     * Retrieve the identifier for the currently identified tenant.
+     *
+     * @return string
+     */
     protected function getIdentifier()
     {
         if ($secondary = $this->tenant->getSecondaryIdentifier()) {

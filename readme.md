@@ -101,6 +101,7 @@ To generate a url for a tenant based route, you can use the following methods:
     Multitenancy::url($path, $paramaters = [], $secure = false);
     
 These methods act the same as `route()` and `url()` except that they automatically add the correct domain for the current tenant.
+NOTE: The `url()` method has been removed for now as it wasn't working exactly as intended.
 
 ## Eloquent ##
 

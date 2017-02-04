@@ -1,6 +1,7 @@
 <?php
 namespace Ollieread\Multitenancy;
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +50,11 @@ class TenantManager
      * @var boolean
      */
     protected $primary = false;
+
+    /**
+     * @var callable
+     */
+    protected $connectionParser;
 
     public function __construct($app)
     {
@@ -130,8 +136,8 @@ class TenantManager
      */
     protected function getProviderConfig($provider)
     {
-        if (isset($this->config[$provider])) {
-            return $this->config[$provider];
+        if (isset($this->config['providers'][$provider])) {
+            return $this->config['providers'][$provider];
         }
 
         return [];
@@ -168,6 +174,39 @@ class TenantManager
     }
 
     /**
+     * Set the parser for the connection configuration.
+     *
+     * @param callable $connection
+     *
+     * @return mixed
+     */
+    public function setConnectionParser(callable $connection)
+    {
+        $this->connectionParser = $connection;
+    }
+
+    /**
+     * Parse the connection configuration.
+     *
+     * @param array $config
+     *
+     * @return mixed
+     */
+    public function parseConnection(array $config)
+    {
+        if (is_callable($this->connectionParser)) {
+            return call_user_func($this->connectionParser, $config, $this->tenant);
+        }
+
+        throw new \InvalidArgumentException('No connection parser set');
+    }
+
+    public function connection()
+    {
+        return app(DatabaseManager::class)->connection('multitenancy');
+    }
+
+    /**
      * Setup system routes that should belong to a tenant.
      *
      * @param \Closure $routes
@@ -195,7 +234,26 @@ class TenantManager
      */
     public function process(Request $request)
     {
-        $identifier = $request->route()->parameter('_multitenant_');
+        if ($request->route()->hasParameter('_multitenant_')) {
+            $identifier = $request->route()->parameter('_multitenant_');
+            $request->route()->forgetParameter('_multitenant_');
+        } else {
+            $identifier = $request->getHost();
+        }
+
+        $this->loadTenant($identifier);
+    }
+
+    /**
+     * Load the tenant from the provided identifier.
+     *
+     * @param $identifier
+     *
+     * @return bool
+     * @throws \Ollieread\Multitenancy\Exceptions\InvalidTenantException
+     */
+    protected function loadTenant($identifier)
+    {
         $this->primary = false;
 
         if (strpos($identifier, $this->config['domain']) !== false) {
@@ -209,7 +267,7 @@ class TenantManager
             throw new InvalidTenantException('Invalid Tenant \''.$identifier.'\'');
         }
 
-        $request->route()->forgetParameter('_multitenant_');
+        return true;
     }
 
     /**

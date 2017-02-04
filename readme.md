@@ -95,6 +95,10 @@ It is worth noting that if this method is called inside a group that has the def
         });
     }
     
+If you wish to use your own route groups, just make sure you load the following middleware before any authentication related middleware.
+
+    Ollieread\Multitenancy\Middleware\LoadTenant
+    
 To generate a url for a tenant based route, you can use the following methods:
 
     Multitenancy::route($name, $paramaters = [], $absolute = false);
@@ -122,6 +126,25 @@ There is a scope available to you for use on models that belong to a tenant. To 
 This only works for models that have the tenant foreign key as a column, and is designed to prevent you from having to manually add where clauses everywhere.
 
 If you wish to see all entries regardless of the current tenant, use the `withAll()` method.
+
+## Multi Database ##
+
+If you wish to use a multi database multitenant approach (each tenant has their own database), you can do so with this package.
+
+### Configuring ###
+
+Create yourself a base configuration within the database configuration file. For example, duplicate the mysql connection information, rename to whatever you would like, set the database name to be an empty string, and then update the `multidatabase.connection` setting in the multitenancy configuration file.
+
+By default, the connection will look for a database named `tenant_{id}` where `{id}` is the id of the row from the tenant model. To override this, you need to provide a configuration parser, which will allow you to adjust all of the connection configuration settings per tenant. Below is how to do so, using the default implementation.
+
+    Multitenancy::setConnectionParser(function ($config = [], Tenant $tenant) {
+        $config['database'] = 'tenant_'.$tenant->id;
+        return $config;
+    });
+
+### Implementing ###
+
+To use this, simple reference the `multitenancy` connection either in the Eloquent model property, or by using `DB::connection('multitenancy')` when using the base database library.
 
 ## Authentication ##
 

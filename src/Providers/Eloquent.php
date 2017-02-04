@@ -26,7 +26,7 @@ class Eloquent implements Provider
      * @param      $identifier
      * @param bool $primary
      *
-     * @return Tenant|TenantPrimary|TenantSecondary|Model
+     * @return Tenant
      */
     public function retrieveByIdentifier($identifier, $primary = true)
     {
@@ -39,7 +39,7 @@ class Eloquent implements Provider
     }
 
     /**
-     * @return Tenant|TenantPrimary|TenantSecondary|Model
+     * @return Tenant
      */
     public function createModel()
     {

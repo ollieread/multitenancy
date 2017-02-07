@@ -57,7 +57,10 @@ class ServiceProvider extends BaseServiceProvider
         });
 
         $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
-            $config['database'] = 'tenant_'.$tenant->id;
+            if ($tenant) {
+                $config['database'] = 'tenant_' . $tenant->id;
+            }
+
             return $config;
         });
     }

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Ollieread\Multitenancy\Auth\DatabaseUserProvider;
 use Ollieread\Multitenancy\Auth\SessionGuard;
+use Ollieread\Multitenancy\Contracts\Provider;
 use Ollieread\Multitenancy\Contracts\Tenant;
 use Ollieread\Multitenancy\Exceptions\InvalidTenantException;
 use Ollieread\Multitenancy\Providers\Database;
@@ -41,9 +42,23 @@ class ServiceProvider extends BaseServiceProvider
             return new Database($app['db']->connection(), $config['table'], $config['identifiers']);
         });
 
+        // Bind TenantManager
         $this->app->instance('multitenancy', $manager);
-        $this->app->singleton('multitenancy.provider', function ($app) {
+        // For injection
+        $this->app->bind(TenantManager::class, function ($app) {
+            return $app['multitenancy'];
+        });
+        // Bind Provider
+        $this->app->bind('multitenancy.provider', function ($app) {
             return $app['multitenancy']->provider();
+        });
+        // For injection
+        $this->app->bind(Provider::class, function ($app) {
+            return $app['multitenancy']->provider();
+        });
+        // For Tenant injection
+        $this->app->bind(Tenant::class, function ($app) {
+            return $app['multitenancy']->tenant();
         });
 
         $this->app['db']->extend('multitenancy', function ($config, $name) use ($manager) {

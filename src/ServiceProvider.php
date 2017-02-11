@@ -49,11 +49,9 @@ class ServiceProvider extends BaseServiceProvider
         $this->app['db']->extend('multitenancy', function ($config, $name) use ($manager) {
             if ($manager->hasTenant()) {
                 $config = $manager->parseConnection($config);
-
-                return $this->app['db.factory']->make($config, $name);
             }
 
-            throw new InvalidTenantException('No tenant selected');
+            return $this->app['db.factory']->make($config, $name);
         });
 
         $manager->setConnectionParser(function ($config = [], Tenant $tenant) {

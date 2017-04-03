@@ -3,6 +3,7 @@
     "description": "",
     "type": "library",
     "license": "MIT",
+    "version": "2.2.4",
     "authors": [
         {
             "name": "Ollie Read",

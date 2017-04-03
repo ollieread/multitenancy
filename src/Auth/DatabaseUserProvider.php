@@ -29,7 +29,7 @@ class DatabaseUserProvider extends OriginalProvider
      */
     protected function getTenantId()
     {
-        return Multitenancy::tenant()->id;
+        return Multitenancy::hasTenant() ? Multitenancy::tenant()->id : null;
     }
 
     public function retrieveById($identifier)

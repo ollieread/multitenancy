@@ -20,7 +20,7 @@ class SessionGuard extends OriginalGuard
      */
     protected function getTenantName()
     {
-        return str_slug(Multitenancy::tenant()->getPrimaryIdentifier()) . '_';
+        return Multitenancy::hasTenant() ? str_slug(Multitenancy::tenant()->getPrimaryIdentifier()) . '_' : 'unknown_';
     }
 
     /**

@@ -2,7 +2,7 @@
 
 [![Latest Stable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/stable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Total Downloads](https://poser.pugx.org/ollieread/laravel-multitenancy/downloads.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Latest Unstable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/unstable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![License](https://poser.pugx.org/ollieread/laravel-multitenancy/license.png)](https://packagist.org/packages/ollieread/laravel-multitenancy)
 
-- **Laravel**: 5.3 & 5.4
+- **Laravel**: 5.4 & 5.5
 - **Author**: Ollie Read 
 - **Author Homepage**: http://ollieread.com
 
@@ -20,6 +20,13 @@ Firstly you want to include this package in your composer.json file.
 Now you'll want to update or install via composer.
 
     composer update
+    
+### Laravel 5.5 ###
+
+If you're using Laravel 5.5, the service provider and the facade are automatically registered
+using the package auto discovery.
+
+### Laravel 5.4 ###
 
 Next you open up app/config/app.php and add the following.
 
@@ -37,19 +44,19 @@ Finally, run the following command to publish the config.
 
 There are three main parts to the configuration.
 
-#####The provider
+### The provider ###
 
     'provider'      => 'eloquent',
     
 By default this is can be either `eloquent` or `database`. If you add a custom provider, you'd use the name here.
 
-#####The domain
+### The domain ###
 
     'domain'        => env('MULTITENANCY_DOMAIN', 'mydomain.com'),
     
 The domain that should be used for tenant based subdomains.
 
-#####The Provider settings
+### The Provider settings ###
 
     'eloquent'      => [
         // The model representing a tenant
@@ -122,6 +129,10 @@ There is a trait available that provides implementation using the default column
 There is a scope available to you for use on models that belong to a tenant. To use this, add the following trait to the models you wish to belong to a tenant:
 
     Ollieread\Multitenancy\Traits\TenantOwned
+    
+Your model should also implement the following contract.
+
+    Ollieread\Multitenancy\Contracts\TenantOwned
     
 This only works for models that have the tenant foreign key as a column, and is designed to prevent you from having to manually add where clauses everywhere.
 

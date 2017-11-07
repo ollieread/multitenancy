@@ -34,35 +34,40 @@ class ServiceProvider extends BaseServiceProvider
      */
     public function register()
     {
+        // Register the tenant manager
         $manager = new TenantManager($this->app);
         $manager->extend('eloquent', function ($app, $config) {
             return new Eloquent($config['model']);
         })->extend('database', function ($app, $config) {
             return new Database($app['db']->connection(), $config['table'], $config['identifiers']);
         });
-
+        // Register the instances with the ioc
         $this->app->instance('multitenancy', $manager);
         $this->app->singleton('multitenancy.provider', function ($app) {
             return $app['multitenancy']->provider();
         });
 
-        $this->app['db']->extend('multitenancy', function ($config, $name) use ($manager) {
-            if ($manager->hasTenant()) {
-                $config = $manager->parseConnection($config);
+        // Setup multidatabase if it exists
+        if (config('multitenancy.multidatabase.enabled', false)) {
+            // Extend the database connection
+            $this->app['db']->extend(config('multitenancy.multidatabase.connection'), function ($config, $name) use ($manager) {
+                if ($manager->hasTenant()) {
+                    $config = $manager->parseConnection($config);
 
-                return $this->app['db.factory']->make($config, $name);
-            }
+                    return $this->app['db.factory']->make($config, $name);
+                }
 
-            throw new InvalidTenantException('No tenant selected');
-        });
+                throw new InvalidTenantException('No tenant selected');
+            });
+            // Set the parser of the config
+            $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
+                if ($tenant) {
+                    $config['database'] = 'tenant_' . $tenant->id;
+                }
 
-        $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
-            if ($tenant) {
-                $config['database'] = 'tenant_' . $tenant->id;
-            }
-
-            return $config;
-        });
+                return $config;
+            });
+        }
     }
 
     public function provides()

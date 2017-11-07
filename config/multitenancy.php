@@ -19,21 +19,21 @@ return [
      */
     'providers'     => [
         //Eloquent provider settings.
-        'eloquent'      => [
+        'eloquent' => [
             // The model representing a tenant
-            'model'         => Ollieread\Multitenancy\Models\Tenant::class
+            'model' => Ollieread\Multitenancy\Models\Tenant::class,
         ],
         //Database provider settings.
-        'database'      => [
+        'database' => [
             // The table where tenants are stored
-            'table'         => 'tenants',
+            'table'       => 'tenants',
             // The foreign key for identifying tenant ownership
-            'foreign_key'   => 'tenant_id',
+            'foreign_key' => 'tenant_id',
             // The identifiers used to identify a tenant
-            'identifiers'   => [
-                'slug', 'domain'
+            'identifiers' => [
+                'slug', 'domain',
             ],
-        ]
+        ],
     ],
 
     /*
@@ -42,11 +42,15 @@ return [
      */
     'multidatabase' => [
         /*
+         * Whether or not you want each tenant to have this own database.
+         */
+        'enabled'    => true,
+        /*
          * This is the connection to use for tenancy, for example, if you wish to use the same
          * connection details as the mysql connection, copy the details into a new connection
          * in config/database.php and add the name here.
          */
-        'connection'    => 'multitenancy'
-    ]
+        'connection' => 'multitenancy',
+    ],
 
 ];

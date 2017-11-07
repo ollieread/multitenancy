@@ -1,4 +1,5 @@
 <?php
+
 namespace Ollieread\Multitenancy;
 
 use Illuminate\Database\DatabaseManager;
@@ -20,18 +21,21 @@ class TenantManager
 
     /**
      * An instance of the application.
+     *
      * @var Application
      */
     protected $app;
 
     /**
      * The configuration for the package.
+     *
      * @var array
      */
     protected $config;
 
     /**
      * Array of providers.
+     *
      * @var array
      */
     protected $providers = [];
@@ -58,7 +62,7 @@ class TenantManager
 
     public function __construct($app)
     {
-        $this->app = $app;
+        $this->app    = $app;
         $this->config = $app['config']['multitenancy'];
     }
 
@@ -106,6 +110,7 @@ class TenantManager
     public function extend($name, \Closure $callback)
     {
         $this->providers[$name] = $callback;
+
         return $this;
     }
 
@@ -124,7 +129,7 @@ class TenantManager
             );
         }
 
-        throw new \RuntimeException('Invalid provider: '.$this->config['provider']);
+        throw new \RuntimeException('Invalid provider: ' . $this->config['provider']);
     }
 
     /**
@@ -182,7 +187,11 @@ class TenantManager
      */
     public function setConnectionParser(callable $connection)
     {
-        $this->connectionParser = $connection;
+        if ($this->config['multidatabase']['enabled']) {
+            $this->connectionParser = $connection;
+        }
+
+        throw new \RuntimeException('Multidatabase is not enabled');
     }
 
     /**
@@ -194,35 +203,35 @@ class TenantManager
      */
     public function parseConnection(array $config)
     {
-        if (is_callable($this->connectionParser)) {
-            return call_user_func($this->connectionParser, $config, $this->tenant);
+        if ($this->config['multidatabase']['enabled']) {
+            if (is_callable($this->connectionParser)) {
+                return call_user_func($this->connectionParser, $config, $this->tenant);
+            }
+
+            throw new \InvalidArgumentException('No connection parser set');
         }
 
-        throw new \InvalidArgumentException('No connection parser set');
+        throw new \RuntimeException('Multidatabase is not enabled');
     }
 
     public function connection()
     {
-        return app(DatabaseManager::class)->connection('multitenancy');
+        if ($this->config['multidatabase']['enabled']) {
+            return app(DatabaseManager::class)->connection($this->config['multidatabase']['connection']);
+        }
+
+        throw new \RuntimeException('Multidatabase is not enabled');
     }
 
     /**
      * Setup system routes that should belong to a tenant.
      *
      * @param \Closure $routes
-     *
-     * @return mixed
      */
     public function routes(\Closure $routes)
     {
         Route::pattern('_multitenant_', '[a-z0-9.]+');
-
-        return Route::group(
-            [
-                'domain'        => '{_multitenant_}',
-                'middleware'    => LoadTenant::class
-            ],
-            $routes);
+        Route::group(['domain' => '{_multitenant_}', 'middleware' => LoadTenant::class,], $routes);
     }
 
     /**
@@ -257,14 +266,14 @@ class TenantManager
         $this->primary = false;
 
         if (strpos($identifier, $this->config['domain']) !== false) {
-            $identifier = str_replace('.'.$this->config['domain'], '', $identifier);
+            $identifier    = str_replace('.' . $this->config['domain'], '', $identifier);
             $this->primary = true;
         }
 
         $this->tenant = $this->provider()->retrieveByIdentifier($identifier, $this->primary);
 
         if (! $this->tenant) {
-            throw new InvalidTenantException('Invalid Tenant \''.$identifier.'\'');
+            throw new InvalidTenantException('Invalid Tenant \'' . $identifier . '\'');
         }
 
         return true;
@@ -285,8 +294,8 @@ class TenantManager
     }
 
     /**
-     * Returns whether or not the current tenant is identified by the primary identifier. Assume that if there is a tenant
-     * and this is false, that they're using the secondary identifier.
+     * Returns whether or not the current tenant is identified by the primary identifier. Assume that if there is a
+     * tenant and this is false, that they're using the secondary identifier.
      *
      * @return bool
      */
@@ -305,7 +314,7 @@ class TenantManager
         if ($secondary = $this->tenant->getSecondaryIdentifier()) {
             return $secondary;
         } else {
-            return $this->tenant->getPrimaryIdentifier().'.'.$this->config['domain'];
+            return $this->tenant->getPrimaryIdentifier() . '.' . $this->config['domain'];
         }
     }
 }

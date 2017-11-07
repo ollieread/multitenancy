@@ -1,13 +1,13 @@
 {
     "name": "ollieread/laravel-multitenancy",
-    "description": "",
+    "description": "A multitenancy package for Laravel",
     "type": "library",
     "license": "MIT",
     "version": "dev-develop",
     "authors": [
         {
             "name": "Ollie Read",
-            "email": "labs@ollieread.com"
+            "email": "me@ollieread.com"
         }
     ],
     "require": {

@@ -2,177 +2,158 @@
 
 [![Latest Stable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/stable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Total Downloads](https://poser.pugx.org/ollieread/laravel-multitenancy/downloads.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![Latest Unstable Version](https://poser.pugx.org/ollieread/laravel-multitenancy/v/unstable.png)](https://packagist.org/packages/ollieread/laravel-multitenancy) [![License](https://poser.pugx.org/ollieread/laravel-multitenancy/license.png)](https://packagist.org/packages/ollieread/laravel-multitenancy)
 
-- **Laravel**: 5.4 & 5.5
+- **Laravel**: 5.5
+- **PHP**: 7.1+
 - **Author**: Ollie Read 
 - **Author Homepage**: http://ollieread.com
 
-Laravel package for multitenancy using subdomain and/or domain based identification.
-The package itself works much in the same way as the default Auth library.
+This package provides multi-database multi-tenancy support for your Laravel application. 
 
-## Installation ##
+Tenants are identified primarily by a domain, falling back on a subdomain of a provided domain. Tenants are stored in a central database, with an individual database per tenant. 
 
-Firstly you want to include this package in your composer.json file.
+## Installation
 
-    "require": {
-        "ollieread/laravel-multitenancy": "^2"
-    }
+Package is available on [Packagist](https://packagist.org/packages/ollieread/laravel-multitenancy), you can install it using Composer.
+
+    composer require ollieread/laravel-multitenancy
     
-Now you'll want to update or install via composer.
-
-    composer update
-    
-### Laravel 5.5 ###
-
-If you're using Laravel 5.5, the service provider and the facade are automatically registered
-using the package auto discovery.
-
-### Laravel 5.4 ###
-
-Next you open up app/config/app.php and add the following.
-
-    Ollieread\Multitenancy\ServiceProvider::class,
-    
-Then the facade.
-
-    'Multitenancy' => Ollieread\Multitenancy\Facades\Multitenancy::class,
-
-Finally, run the following command to publish the config.
+Next you'll want to publish the configuration.
 
     php artisan vendor:publish --provider=Ollieread\Multitenancy\ServiceProvider
     
-## Configuration ##
+## Configuration
 
-There are three main parts to the configuration.
+The configuration file will be located at `config/multitenancy.php`.
 
-### The provider ###
+### Provider
 
-    'provider'      => 'eloquent',
+There are two providers available by default, `database` and `eloquent`. Set this with `multitenancy.provider`.
+
+Each provider has its own settings, of which defaults are provided.
+
+#### Eloquent
+
+For the `eloquent` provider, just provide the model class with `multitenancy.eloquent.model`.
+
+#### Database
+
+For the `database` provider, you'll need to provide the tenant table name with `multitenancy.database.table`, and the identifiers for subdomain and domain with `mutltitenancy.database.identifiers.subdomain` and `multitenancy.database.identifiers.domain`.
+
+### Domain
+
+For the fallback subdomains, you'll need to provide the domain for usage with `multitenancy.domain`.
+
+### Multidatabase
+
+For the multidatabase support, you need to provide the connection to be used with `multitenancy.multidatabase.connection`. You can also change the default location of the tenant migrations with `multitenancy.multidatabase.migrations`.
+
+For a simple setup, I'll typically just duplicate the `mysql` connection, and call it something else.
+
+## Usage
+
+You can use the tenancy manager by using the following facade;
+
+    Ollieread\Multitenancy\Facades\Multitenancy
     
-By default this is can be either `eloquent` or `database`. If you add a custom provider, you'd use the name here.
+Or you can inject the following manager;
 
-### The domain ###
-
-    'domain'        => env('MULTITENANCY_DOMAIN', 'mydomain.com'),
+    Ollieread\Multitenancy\TenantManager
     
-The domain that should be used for tenant based subdomains.
+### Eloquent
 
-### The Provider settings ###
-
-    'eloquent'      => [
-        // The model representing a tenant
-        'model'         => Ollieread\Multitenancy\Models\Tenant::class
-    ],
-    
-    'database'      => [
-        // The table where tenants are stored
-        'table'         => 'tenants',
-        // The foreign key for identifying tenant ownership
-        'foreign_key'   => 'tenant_id',
-        // The identifiers used to identify a tenant
-        'identifiers'   => [
-            'slug', 'domain'
-        ]
-    ]
-    
-These particular settings are defined by the individual providers and the defaults contain small descriptions.
-
-## Current Tenant ##
-
-Access the currently identified tenant by using `Multitenancy::tenant()`.
-
-## Tenant Routes ##
-
-There is a method for create route groups that should be part of the tenant system.
-
-    Multitenancy::routes(function (Router $router) {
-        $router->get('/tenancy', function() {
-            $tenant = Multitenancy::tenant();
-            dd($tenant);
-        });
-    });
-    
-It is worth noting that if this method is called inside a group that has the default `web` group, it'll error. You should instead wrap the `web` group routes in this, eg:
-
-    protected function mapWebRoutes()
-    {
-        Multitenancy::routes(function (Router $router) {
-            Route::middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/web.php'));
-        });
-    }
-    
-If you wish to use your own route groups, just make sure you load the following middleware before any authentication related middleware.
-
-    Ollieread\Multitenancy\Middleware\LoadTenant
-    
-To generate a url for a tenant based route, you can use the following methods:
-
-    Multitenancy::route($name, $paramaters = [], $absolute = false);
-    Multitenancy::url($path, $paramaters = [], $secure = false);
-    
-These methods act the same as `route()` and `url()` except that they automatically add the correct domain for the current tenant.
-NOTE: The `url()` method has been removed for now as it wasn't working exactly as intended.
-
-## Eloquent ##
-
-If using the eloquent provider, the specified model must implement:
+If you're using the `eloquent` provider, your tenant model should implement the following contract;
 
     Ollieread\Multitenancy\Contracts\Tenant
     
-There is a trait available that provides implementation using the default column names `slug` and `domain`. It also offers access to `route()` and `url()` on the model. This trait is:
+For simplicity, you can use the following trait;
 
-    Ollieread\Multitenancy\Traits\Tenant
+    Ollieread\Multitenancy\Concerns\IsTenant
     
-### Scopes ###
+All models that represent data for the tenant should return the connection name provided in the configuration. This can be done in several ways.
 
-There is a scope available to you for use on models that belong to a tenant. To use this, add the following trait to the models you wish to belong to a tenant:
+By implementing the following contract;
 
-    Ollieread\Multitenancy\Traits\TenantOwned
+    Ollieread\Multitenancy\Concerns\HasTenant
     
-Your model should also implement the following contract.
+By setting the connection property on the models;
 
-    Ollieread\Multitenancy\Contracts\TenantOwned
+    protected $connection = 'my-tenant-connection-name';
     
-This only works for models that have the tenant foreign key as a column, and is designed to prevent you from having to manually add where clauses everywhere.
+Or by returning the name from the method;
 
-If you wish to see all entries regardless of the current tenant, use the `withAll()` method.
+    public function getConnectionName(): string
+    {
+        return 'my-tenant-connection-name';
+    }
+    
+The choice is entirely up to you, but as long as it's done, that's fine.
 
-## Multi Database ##
+### Manually Setting the Tenant
 
-If you wish to use a multi database multitenant approach (each tenant has their own database), you can do so with this package.
+To set the tenant, you need to call the following;
 
-### Configuring ###
+    $tenantManager->setTenant($tenant)
+    
+The value of `$tenant` should be object that implements the tenant contract. If you're using the database provider, you can just pass the array representing the tenant into the constructor of the following class.
 
-Create yourself a base configuration within the database configuration file. For example, duplicate the mysql connection information, rename to whatever you would like, set the database name to be an empty string, and then update the `multidatabase.connection` setting in the multitenancy configuration file.
+    Ollieread\Multitenancy\GenericTenant
+    
+When overwriting the tenant by setting it when a tenant has already been set, it is required that you chain the following method;
 
-By default, the connection will look for a database named `tenant_{id}` where `{id}` is the id of the row from the tenant model. To override this, you need to provide a configuration parser, which will allow you to adjust all of the connection configuration settings per tenant. Below is how to do so, using the default implementation.
+    $tenantManager->setTenant($tenant)->reconnect()
+    
+This actually causes the connection configuration to be parsed again.
+    
+### Retrieving the Tenant
 
-    Multitenancy::setConnectionParser(function ($config = [], Tenant $tenant) {
+To retrieve the current tenant, you need to call the following;
+
+    $tenantManager->tenant()
+
+### Tenant Routes
+
+Tenant routes should be wrapped in a group with the following middleware.
+
+    Ollieread\Multitenancy\Middleware\LoadTenant
+    
+I recommend creating a middleware group for this.
+
+You can generate a `route` or `url` for the currently set tenant by using the following method.
+
+    $tenantManager->route('route.name')
+    $tenantManager->url('/something/path')
+    
+These methods work exactly the same as the `route` and `url` helper method, except they're prefixed with the domain or subdomain if no domain is available. By default, the `route` method will not prefix with the protocol.
+
+### Handling the Tenant connection
+
+If you wish to change the connection parser used to connect to a tenants database, you need to call the following;
+
+    $tenantManager->setConnectionParser(function ($config = [], Tenant $tenant) {
         $config['database'] = 'tenant_'.$tenant->id;
         return $config;
     });
+    
+The above is the default connection parser provided with this package.
 
-### Implementing ###
+To retrieve the connection object for the multitenant connection, you need to call the following;
 
-To use this, simple reference the `multitenancy` connection either in the Eloquent model property, or by using `DB::connection('multitenancy')` when using the base database library.
+    $tenantManager->connection()
+    
+You can force the connection to reconnect by calling the following;
 
-## Authentication ##
+    $tenantManager->reconnect()
+    
+## Custom Providers
 
-If you're using the `TenantOwned` trait on your user model you won't need to do anything with the Eloquent provider.
+If you wish to create yourself a customer provider, for example, using Doctrine, you need to implement the following interface;
 
-For session based authentication you'll want to use the `session.multi` guard, which is identical to the default session guard, except that prefixes session and cookie names with the tenant primary identifier to allow users to be logged into multiple tenants at once.
-
-If you're using the Database provider for auth, you'll want to use the `database.multi` provider so that you only retrieve records specific to the current tenant.
-
-## Custom Providers ##
-
-This package supports custom providers. To create a custom provider, create a class that implements `Ollieread\Multitenancy\Contracts\Provider` and then register it like so:
+    Ollieread\Multitenancy\Contracts\Provider
+    
+Once you have this, you can register this the same way you can with most Laravel packages.
 
     Multitenancy::extend('eloquent', function ($app, $config) {
         return new Eloquent($config['model']);
     })->extend('database', function ($app, $config) {
         return new Database($app['db']->connection(), $config['table'], $config['identifiers']);
     });
-    
-The method is setup for daisy chaining should you need to add multiple.

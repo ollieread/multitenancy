@@ -1,17 +1,15 @@
 <?php
 namespace Ollieread\Multitenancy;
 
-use Ollieread\Multitenancy\Contracts\Tenant as TenantContract;
-use Ollieread\Multitenancy\Traits\Tenant as TenantTrait;
 
 /**
  * Class GenericTenant
  *
  * @package Ollieslab\Multitenancy
  */
-class GenericTenant implements TenantContract
+class GenericTenant implements Contracts\Tenant
 {
-    use TenantTrait;
+    use Concerns\IsTenant;
 
     /**
      * All of the user's attributes.

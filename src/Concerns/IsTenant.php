@@ -1,15 +1,15 @@
 <?php
 
-namespace Ollieread\Multitenancy\Traits;
+namespace Ollieread\Multitenancy\Concerns;
 
 use Ollieread\Multitenancy\Facades\Multitenancy;
 
 /**
  * Tenant trait
  *
- * @package Ollieread\Multitenancy\Traits
+ * @package Ollieread\Multitenancy\Concerns
  */
-trait Tenant
+trait IsTenant
 {
 
     /**

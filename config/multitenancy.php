@@ -46,6 +46,11 @@ return [
          * in config/database.php and add the name here.
          */
         'connection' => 'multitenancy',
+        /*
+         * The path where the migrations will be stored. They are stored separately to the normal
+         * migrations as they're ran only on a tenants database.
+         */
+        'migrations' => database_path('migrations/tenant'),
     ],
 
 ];

@@ -1,4 +1,5 @@
 <?php
+
 namespace Ollieread\Multitenancy\Traits;
 
 use Ollieread\Multitenancy\Facades\Multitenancy;
@@ -12,43 +13,43 @@ trait Tenant
 {
 
     /**
-     * Get the primary identifier column name.
+     * Get the subdomain identifier column name.
      *
      * @return string
      */
-    public function getPrimaryIdentifierName()
+    public function getSubdomainIdentifierName()
     {
         return 'slug';
     }
 
     /**
-     * Get the primary identifier.
+     * Get the subdomain identifier.
      *
      * @return string
      */
-    public function getPrimaryIdentifier()
+    public function getSubdomainIdentifier()
     {
-        return $this->{$this->getPrimaryIdentifierName()};
+        return $this->{$this->getSubdomainIdentifierName()};
     }
 
     /**
-     * Get the secondary identifier column name.
+     * Get the domain identifier column name.
      *
      * @return string
      */
-    public function getSecondaryIdentifierName()
+    public function getDomainIdentifierName()
     {
         return 'domain';
     }
 
     /**
-     * Get the secondary identifier.
+     * Get the domain identifier.
      *
      * @return string
      */
-    public function getSecondaryIdentifier()
+    public function getDomainIdentifier()
     {
-        return $this->{$this->getSecondaryIdentifierName()};
+        return $this->{$this->getDomainIdentifierName()};
     }
 
     /**

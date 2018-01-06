@@ -27,11 +27,10 @@ return [
         'database' => [
             // The table where tenants are stored
             'table'       => 'tenants',
-            // The foreign key for identifying tenant ownership
-            'foreign_key' => 'tenant_id',
             // The identifiers used to identify a tenant
             'identifiers' => [
-                'slug', 'domain',
+                'domain'    => 'domain',
+                'subdomain' => 'slug',
             ],
         ],
     ],
@@ -41,10 +40,6 @@ return [
      * individual database.
      */
     'multidatabase' => [
-        /*
-         * Whether or not you want each tenant to have this own database.
-         */
-        'enabled'    => true,
         /*
          * This is the connection to use for tenancy, for example, if you wish to use the same
          * connection details as the mysql connection, copy the details into a new connection

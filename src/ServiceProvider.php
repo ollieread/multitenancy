@@ -23,8 +23,6 @@ class ServiceProvider extends BaseServiceProvider
         $this->publishes([
             __DIR__ . '/../config/multitenancy.php' => config_path('multitenancy.php')
         ], 'config');
-
-        $this->registerAuth();
     }
 
     /**
@@ -47,49 +45,29 @@ class ServiceProvider extends BaseServiceProvider
             return $app['multitenancy']->provider();
         });
 
-        // Setup multidatabase if it exists
-        if (config('multitenancy.multidatabase.enabled', false)) {
-            // Extend the database connection
-            $this->app['db']->extend(config('multitenancy.multidatabase.connection'), function ($config, $name) use ($manager) {
-                if ($manager->hasTenant()) {
-                    $config = $manager->parseConnection($config);
+        // Setup multidatabase
+        // Extend the database connection
+        $this->app['db']->extend(config('multitenancy.multidatabase.connection'), function ($config, $name) use ($manager) {
+            if ($manager->hasTenant()) {
+                $config = $manager->parseConnection($config);
 
-                    return $this->app['db.factory']->make($config, $name);
-                }
+                return $this->app['db.factory']->make($config, $name);
+            }
 
-                throw new InvalidTenantException('No tenant selected');
-            });
-            // Set the parser of the config
-            $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
-                if ($tenant) {
-                    $config['database'] = 'tenant_' . $tenant->id;
-                }
+            throw new InvalidTenantException('No tenant selected');
+        });
+        // Set the parser of the config
+        $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
+            if ($tenant) {
+                $config['database'] = 'tenant_' . $tenant->id;
+            }
 
-                return $config;
-            });
-        }
+            return $config;
+        });
     }
 
     public function provides()
     {
         return ['multitenancy'];
-    }
-
-    public function registerAuth()
-    {
-        // Register the session guard
-        Auth::extend('session.multi', function ($app, $name, array $config) {
-            $guard = new SessionGuard($name, Auth::createUserProvider($config['provider']), $app['session.store']);
-            $guard->setCookieJar($app['cookie']);
-            $guard->setDispatcher($app['events']);
-            $guard->setRequest($app->refresh('request', $guard, 'setRequest'));
-
-            return $guard;
-        });
-
-        // Register the database provider
-        Auth::provider('database.multi', function ($app, array $config) {
-            return new DatabaseUserProvider($app['db']->connection, $app['hash'], $config['table']);
-        });
     }
 }

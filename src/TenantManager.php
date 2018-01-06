@@ -2,14 +2,10 @@
 
 namespace Ollieread\Multitenancy;
 
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use Ollieread\Multitenancy\Contracts\Provider;
 use Ollieread\Multitenancy\Contracts\Tenant;
 use Ollieread\Multitenancy\Exceptions\InvalidTenantException;
-use Ollieread\Multitenancy\Middleware\LoadTenant;
 
 /**
  * Class Manager
@@ -18,13 +14,9 @@ use Ollieread\Multitenancy\Middleware\LoadTenant;
  */
 class TenantManager
 {
-
-    /**
-     * An instance of the application.
-     *
-     * @var Application
-     */
-    protected $app;
+    use Concerns\HasProviders,
+        Concerns\ManagesConnection,
+        Concerns\ManagesDatabase;
 
     /**
      * The configuration for the package.
@@ -34,118 +26,21 @@ class TenantManager
     protected $config;
 
     /**
-     * Array of providers.
+     * An instance of the application.
      *
-     * @var array
+     * @var Application
      */
-    protected $providers = [];
-
-    /**
-     * @var Provider
-     */
-    protected $provider;
+    protected $app;
 
     /**
      * @var Tenant
      */
     protected $tenant;
 
-    /**
-     * @var boolean
-     */
-    protected $primary = false;
-
-    /**
-     * @var callable
-     */
-    protected $connectionParser;
-
     public function __construct($app)
     {
         $this->app    = $app;
         $this->config = $app['config']['multitenancy'];
-    }
-
-    /**
-     * Pass any method calls not found through to the provider.
-     *
-     * @param $method
-     * @param $parameters
-     *
-     * @return mixed
-     */
-    public function __call($method, $parameters)
-    {
-        return $this->provider()->{$method}(...$parameters);
-    }
-
-    /**
-     * Retrieve or create the current provider.
-     *
-     * @return \Ollieread\Multitenancy\Contracts\Provider
-     */
-    public function provider()
-    {
-        return $this->provider ? $this->provider : $this->provider = $this->resolve();
-    }
-
-    /**
-     * Resolve to a provider.
-     *
-     * @return \Ollieread\Multitenancy\Contracts\Provider
-     */
-    public function resolve()
-    {
-        return $this->createProvider();
-    }
-
-    /**
-     * Extend the manager with a new provider.
-     *
-     * @param          $name
-     * @param \Closure $callback
-     *
-     * @return $this
-     */
-    public function extend($name, \Closure $callback)
-    {
-        $this->providers[$name] = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Create an instance of the provider.
-     *
-     * @return Provider
-     */
-    protected function createProvider()
-    {
-        if (isset($this->providers[$this->config['provider']])) {
-            return call_user_func(
-                $this->providers[$this->config['provider']],
-                $this->app,
-                $this->getProviderConfig($this->config['provider'])
-            );
-        }
-
-        throw new \RuntimeException('Invalid provider: ' . $this->config['provider']);
-    }
-
-    /**
-     * Retrieve the config for the specified provider.
-     *
-     * @param $provider
-     *
-     * @return array
-     */
-    protected function getProviderConfig($provider)
-    {
-        if (isset($this->config['providers'][$provider])) {
-            return $this->config['providers'][$provider];
-        }
-
-        return [];
     }
 
     /**
@@ -163,7 +58,7 @@ class TenantManager
      *
      * @return \Ollieread\Multitenancy\Contracts\Tenant
      */
-    public function tenant()
+    public function tenant(): Tenant
     {
         return $this->tenant;
     }
@@ -172,66 +67,14 @@ class TenantManager
      * Set the current tenant.
      *
      * @param Tenant $tenant
+     *
+     * @return \Ollieread\Multitenancy\TenantManager
      */
-    public function setTenant($tenant)
+    public function setTenant($tenant): TenantManager
     {
         $this->tenant = $tenant;
-    }
 
-    /**
-     * Set the parser for the connection configuration.
-     *
-     * @param callable $connection
-     *
-     * @return mixed
-     */
-    public function setConnectionParser(callable $connection)
-    {
-        if ($this->config['multidatabase']['enabled']) {
-            $this->connectionParser = $connection;
-        }
-
-        throw new \RuntimeException('Multidatabase is not enabled');
-    }
-
-    /**
-     * Parse the connection configuration.
-     *
-     * @param array $config
-     *
-     * @return mixed
-     */
-    public function parseConnection(array $config)
-    {
-        if ($this->config['multidatabase']['enabled']) {
-            if (is_callable($this->connectionParser)) {
-                return call_user_func($this->connectionParser, $config, $this->tenant);
-            }
-
-            throw new \InvalidArgumentException('No connection parser set');
-        }
-
-        throw new \RuntimeException('Multidatabase is not enabled');
-    }
-
-    public function connection()
-    {
-        if ($this->config['multidatabase']['enabled']) {
-            return app(DatabaseManager::class)->connection($this->config['multidatabase']['connection']);
-        }
-
-        throw new \RuntimeException('Multidatabase is not enabled');
-    }
-
-    /**
-     * Setup system routes that should belong to a tenant.
-     *
-     * @param \Closure $routes
-     */
-    public function routes(\Closure $routes)
-    {
-        Route::pattern('_multitenant_', '[a-z0-9.]+');
-        Route::group(['domain' => '{_multitenant_}', 'middleware' => LoadTenant::class,], $routes);
+        return $this;
     }
 
     /**
@@ -243,12 +86,7 @@ class TenantManager
      */
     public function process(Request $request)
     {
-        if ($request->route()->hasParameter('_multitenant_')) {
-            $identifier = $request->route()->parameter('_multitenant_');
-            $request->route()->forgetParameter('_multitenant_');
-        } else {
-            $identifier = $request->getHost();
-        }
+        $identifier = $request->getHost();
 
         $this->loadTenant($identifier);
     }
@@ -266,11 +104,12 @@ class TenantManager
         $this->primary = false;
 
         if (strpos($identifier, $this->config['domain']) !== false) {
-            $identifier    = str_replace('.' . $this->config['domain'], '', $identifier);
-            $this->primary = true;
+            $this->tenant = $this->provider()
+                ->retrieveBySubdomainIdentifier(str_replace('.' . $this->config['domain'], '', $identifier));
+        } else {
+            $this->tenant = $this->provider()
+                ->retrieveByDomainIdentifier($identifier);
         }
-
-        $this->tenant = $this->provider()->retrieveByIdentifier($identifier, $this->primary);
 
         if (! $this->tenant) {
             throw new InvalidTenantException('Invalid Tenant \'' . $identifier . '\'');
@@ -290,18 +129,23 @@ class TenantManager
      */
     public function route($name, $parameters = [], $absolute = true)
     {
-        return route($name, array_merge([$this->getIdentifier()], $parameters), $absolute);
+        $route = route($name, $parameters, $absolute);
+
+        return $this->getIdentifier() . '/' . $route;
     }
 
     /**
-     * Returns whether or not the current tenant is identified by the primary identifier. Assume that if there is a
-     * tenant and this is false, that they're using the secondary identifier.
+     * Retrieve a URl for the current tenant
      *
-     * @return bool
+     * @param       $path
+     * @param array $parameters
+     * @param bool  $secure
+     *
+     * @return \Illuminate\Contracts\Routing\UrlGenerator|string
      */
-    public function isPrimary()
+    public function url($path, $parameters = [], $secure = false)
     {
-        return $this->primary;
+        return url($this->getIdentifier() . '/' . $path, $parameters, $secure);
     }
 
     /**
@@ -311,10 +155,10 @@ class TenantManager
      */
     protected function getIdentifier()
     {
-        if ($secondary = $this->tenant->getSecondaryIdentifier()) {
-            return $secondary;
+        if ($domain = $this->tenant->getDomainIdentifier()) {
+            return $domain;
         } else {
-            return $this->tenant->getPrimaryIdentifier() . '.' . $this->config['domain'];
+            return $this->tenant->getSubdomainIdentifier() . '.' . $this->config['domain'];
         }
     }
 }

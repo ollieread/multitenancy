@@ -2,6 +2,7 @@
 namespace Ollieread\Multitenancy\Providers;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Ollieread\Multitenancy\Contracts\Provider;
 use Ollieread\Multitenancy\Contracts\Tenant;
 use Ollieread\Multitenancy\Contracts\TenantPrimary;
@@ -23,25 +24,9 @@ class Eloquent implements Provider
     }
 
     /**
-     * @param      $identifier
-     * @param bool $primary
-     *
-     * @return Tenant
+     * @return \Illuminate\Database\Eloquent\Model
      */
-    public function retrieveByIdentifier($identifier, $primary = true)
-    {
-        $model = $this->createModel();
-        $query = $model->newQuery();
-
-        $query->where($primary ? $model->getPrimaryIdentifierName() : $model->getSecondaryIdentifierName(), '=', $identifier);
-
-        return $query->first();
-    }
-
-    /**
-     * @return Tenant
-     */
-    public function createModel()
+    public function createModel(): Model
     {
         $class = '\\'.ltrim($this->model, '\\');
 
@@ -64,5 +49,45 @@ class Eloquent implements Provider
         $this->model = $model;
 
         return $this;
+    }
+
+    /**
+     * @param string $identifier
+     *
+     * @return Tenant
+     */
+    public function retrieveBySubdomainIdentifier(string $identifier): ?Tenant
+    {
+        $model = $this->createModel();
+
+        return $model
+            ->newQuery()
+            ->where($model->getSubdomainIdentifierName(), '=', $identifier)
+            ->first();
+    }
+
+    /**
+     * @param string $identifier
+     *
+     * @return mixed
+     */
+    public function retrieveByDomainIdentifier(string $identifier): ?Tenant
+    {
+        $model = $this->createModel();
+
+        return $model
+            ->newQuery()
+            ->where($model->getDomainIdentifierName(), '=', $identifier)
+            ->first();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    public function retrieveAll(): Collection
+    {
+        return $this->createModel()
+            ->newQuery()
+            ->get();
     }
 }

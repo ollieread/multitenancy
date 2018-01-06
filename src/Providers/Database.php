@@ -1,7 +1,9 @@
 <?php
+
 namespace Ollieread\Multitenancy\Providers;
 
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Collection;
 use Ollieread\Multitenancy\Contracts\Provider;
 use Ollieread\Multitenancy\Contracts\Tenant;
 use Ollieread\Multitenancy\GenericTenant;
@@ -18,28 +20,16 @@ class Database implements Provider
 
     protected $table;
 
-    protected $primaryIdentifier;
+    protected $domainIdentifier;
 
-    protected $secondaryIdentifier;
+    protected $subdomainIdentifier;
 
     public function __construct(ConnectionInterface $connection, $table, $identifiers)
     {
-        $this->connection = $connection;
-        $this->table = $table;
-        $this->primaryIdentifier = $identifiers[0];
-        $this->secondaryIdentifier = isset($identifiers[1]) ? $identifiers[1] : null;
-    }
-
-    public function retrieveById($identifier, $secondaryIdentifier = null)
-    {
-        $query = $this->connection->table($this->table);
-        $query->where($this->primaryIdentifier, '=', $identifier);
-
-        if ($this->secondaryIdentifier) {
-            $query->orWhere($this->secondaryIdentifier, '=', $secondaryIdentifier);
-        }
-
-        return $this->getGenericTenant($query->first());
+        $this->connection          = $connection;
+        $this->table               = $table;
+        $this->domainIdentifier    = $identifiers['domain'];
+        $this->subdomainIdentifier = $identifiers['subdomain'];
     }
 
     protected function getGenericTenant($user)
@@ -50,16 +40,42 @@ class Database implements Provider
     }
 
     /**
-     * @param      $identifier
-     * @param bool $primary
+     * @param string $identifier
      *
      * @return Tenant
      */
-    public function retrieveByIdentifier($identifier, $primary = true)
+    public function retrieveBySubdomainIdentifier(string $identifier): ?Tenant
     {
-        $query = $this->connection->table($this->table);
-        $query->where($primary ? $this->primaryIdentifier : $this->secondaryIdentifier, '=', $identifier);
+        $tenant = $this->connection
+            ->table($this->table)
+            ->where($this->subdomainIdentifier, '=', $identifier)
+            ->first();
 
-        return $this->getGenericTenant($query->first());
+        return $this->getGenericTenant($tenant);
+    }
+
+    /**
+     * @param string $identifier
+     *
+     * @return mixed
+     */
+    public function retrieveByDomainIdentifier(string $identifier): ?Tenant
+    {
+        $tenant = $this->connection
+            ->table($this->table)
+            ->where($this->domainIdentifier, '=', $identifier)
+            ->first();
+
+        return $this->getGenericTenant($tenant);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    public function retrieveAll(): Collection
+    {
+        return $this->connection
+            ->table($this->table)
+            ->get();
     }
 }

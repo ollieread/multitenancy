@@ -1,4 +1,5 @@
 <?php
+
 namespace Ollieread\Multitenancy\Contracts;
 
 /**
@@ -11,30 +12,30 @@ interface Tenant
 {
 
     /**
-     * Get the primary identifier column name.
+     * Get the subdomain identifier column name.
      *
      * @return string
      */
-    public function getPrimaryIdentifierName();
+    public function getSubdomainIdentifierName();
 
     /**
-     * Get the primary identifier.
+     * Get the subdomain identifier.
      *
      * @return string
      */
-    public function getPrimaryIdentifier();
+    public function getSubdomainIdentifier();
 
     /**
-     * Get the secondary identifier column name.
+     * Get the domain identifier column name.
      *
      * @return string
      */
-    public function getSecondaryIdentifierName();
+    public function getDomainIdentifierName();
 
     /**
-     * Get the secondary identifier.
+     * Get the domain identifier.
      *
      * @return string
      */
-    public function getSecondaryIdentifier();
+    public function getDomainIdentifier();
 }

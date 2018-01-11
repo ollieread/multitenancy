@@ -59,7 +59,7 @@ class ServiceProvider extends BaseServiceProvider
         // Set the parser of the config
         $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
             if ($tenant) {
-                $config['database'] = 'tenant_' . $tenant->id;
+                $config['database'] = $tenant->getDatabaseName();
             }
 
             return $config;

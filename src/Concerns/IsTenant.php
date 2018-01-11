@@ -17,7 +17,7 @@ trait IsTenant
      *
      * @return string
      */
-    public function getSubdomainIdentifierName()
+    public function getSubdomainIdentifierName(): string
     {
         return 'slug';
     }
@@ -27,7 +27,7 @@ trait IsTenant
      *
      * @return string
      */
-    public function getSubdomainIdentifier()
+    public function getSubdomainIdentifier(): string
     {
         return $this->{$this->getSubdomainIdentifierName()};
     }
@@ -37,7 +37,7 @@ trait IsTenant
      *
      * @return string
      */
-    public function getDomainIdentifierName()
+    public function getDomainIdentifierName(): string
     {
         return 'domain';
     }
@@ -47,9 +47,17 @@ trait IsTenant
      *
      * @return string
      */
-    public function getDomainIdentifier()
+    public function getDomainIdentifier(): string
     {
         return $this->{$this->getDomainIdentifierName()};
+    }
+
+    /**
+     * @return string
+     */
+    public function getDatabaseName(): string
+    {
+        return 'tenant_' . $this->getKey();
     }
 
     /**

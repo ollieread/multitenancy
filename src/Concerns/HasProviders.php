@@ -9,7 +9,6 @@ use Ollieread\Multitenancy\Contracts\Provider;
  *
  * @package Ollieread\Multitenancy\Concerns
  */
-
 trait HasProviders
 {
     /**
@@ -42,7 +41,7 @@ trait HasProviders
      *
      * @return \Ollieread\Multitenancy\Contracts\Provider
      */
-    public function provider()
+    public function provider(): Provider
     {
         return $this->provider ? $this->provider : $this->provider = $this->resolve();
     }

@@ -1,12 +1,11 @@
 <?php
+
 namespace Ollieread\Multitenancy;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Ollieread\Multitenancy\Auth\DatabaseUserProvider;
 use Ollieread\Multitenancy\Auth\SessionGuard;
 use Ollieread\Multitenancy\Contracts\Tenant;
-use Ollieread\Multitenancy\Exceptions\InvalidTenantException;
 use Ollieread\Multitenancy\Providers\Database;
 use Ollieread\Multitenancy\Providers\Eloquent;
 
@@ -21,7 +20,7 @@ class ServiceProvider extends BaseServiceProvider
     public function boot()
     {
         $this->publishes([
-            __DIR__ . '/../config/multitenancy.php' => config_path('multitenancy.php')
+            __DIR__ . '/../config/multitenancy.php' => config_path('multitenancy.php'),
         ], 'config');
     }
 
@@ -29,6 +28,8 @@ class ServiceProvider extends BaseServiceProvider
      * Register any application services.
      *
      * @return void
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function register()
     {
@@ -45,24 +46,31 @@ class ServiceProvider extends BaseServiceProvider
             return $app['multitenancy']->provider();
         });
 
-        // Setup multidatabase
-        // Extend the database connection
-        $this->app['db']->extend(config('multitenancy.multidatabase.connection'), function ($config, $name) use ($manager) {
-            if ($manager->hasTenant()) {
-                $config = $manager->parseConnection($config);
+        $connections = $this->app['config']['multitenancy']['multidatabase']['connection'];
+        $connections = \is_array($connections) ? $connections : [$connections];
 
-                return $this->app['db.factory']->make($config, $name);
-            }
+        foreach ($connections as $connection) {
+            $this->app['db']->extend($connection, function ($config, $name) use ($manager) {
+                return $manager->resolveConnection($config, $name);
+            });
+        }
 
-            throw new InvalidTenantException('No tenant selected');
-        });
-        // Set the parser of the config
-        $manager->setConnectionParser(function ($config = [], Tenant $tenant) {
+        $manager->setConnectionResolver(function ($config = [], Tenant $tenant, string $connection) {
             if ($tenant) {
-                $config['database'] = $tenant->getDatabaseName();
+                $config['database'] = 'tenant_' . $tenant->id;
             }
 
-            return $config;
+            if ($config['driver'] === 'mongodb') {
+                // This is just a plain string so that we don't have to include the mongodb library
+                // I'm assuming everyone is using this. If you aren't, you can override the resolver yourself.
+                $mongodbConnection = '\Jenssegers\Mongodb\Connection';
+
+                if (class_exists($mongodbConnection)) {
+                    return new $mongodbConnection($config);
+                }
+            }
+
+            return $this->app['db.factory']->make($config, $connection);
         });
     }
 

@@ -12,21 +12,49 @@ use Illuminate\Database\DatabaseManager;
  */
 trait ManagesConnection
 {
+
     /**
      * @var callable
      */
-    protected $connectionParser;
+    protected $defaultConnectionResolver;
 
     /**
-     * Set the parser for the connection configuration.
+     * @var array<callable>
+     */
+    protected $connectionResolvers = [];
+
+    /**
+     * @var array<string>
+     */
+    protected $connections = [];
+
+    public function setConnections(array $connections)
+    {
+        $this->connections = $connections;
+
+        return $this;
+    }
+
+    /**
+     * Set the resolver for the connection.
      *
-     * @param callable $connection
+     * @param callable    $resolver
+     * @param null|string $connection
      *
      * @return mixed
+     * @throws \RuntimeException
      */
-    public function setConnectionParser(callable $connection)
+    public function setConnectionResolver(callable $resolver, ?string $connection = null)
     {
-        $this->connectionParser = $connection;
+        if (! $connection) {
+            $this->defaultConnectionResolver = $resolver;
+        } else {
+            if (\in_array($connection, $this->connections, true)) {
+                $this->connectionResolvers[$connection] = $resolver;
+            } else {
+                throw new \RuntimeException('Invalid connection provided');
+            }
+        }
 
         return $this;
     }
@@ -34,25 +62,41 @@ trait ManagesConnection
     /**
      * Parse the connection configuration.
      *
-     * @param array $config
+     * @param array       $config
+     * @param null|string $connection
      *
      * @return mixed
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
-    public function parseConnection(array $config)
+    public function resolveConnection(array $config, ?string $connection = null)
     {
-        if (is_callable($this->connectionParser)) {
-            return call_user_func($this->connectionParser, $config, $this->tenant);
+        if ($connection && ! \in_array($connection, $this->connections, true)) {
+            throw new \RuntimeException('Invalid connection provided');
+        }
+
+        $resolver = (! $connection || ! isset($this->connectionResolvers[$connection])) ? $this->defaultConnectionResolver : $this->connectionResolvers[$connection];
+
+        if (\is_callable($resolver)) {
+            return $resolver($config, $this->tenant, $connection);
         }
 
         throw new \InvalidArgumentException('No connection parser set');
     }
 
     /**
+     * @param string $connection
+     *
      * @return \Illuminate\Database\Connection
+     * @throws \RuntimeException
      */
-    public function connection(): Connection
+    public function connection(string $connection): Connection
     {
-        return app(DatabaseManager::class)->connection($this->config['multidatabase']['connection']);
+        if ($connection && ! \in_array($connection, $this->connections, true)) {
+            throw new \RuntimeException('Invalid connection provided');
+        }
+
+        return app(DatabaseManager::class)->connection($connection);
     }
 
     /**
@@ -60,6 +104,8 @@ trait ManagesConnection
      */
     public function reconnect()
     {
-        $this->connection()->reconnect();
+        array_walk($this->connections, function ($connection) {
+            $this->connection($connection)->reconnect();
+        });
     }
 }

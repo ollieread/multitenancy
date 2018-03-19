@@ -4,8 +4,10 @@ namespace Ollieread\Multitenancy;
 
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Ollieread\Multitenancy\Contracts\Tenant;
 use Ollieread\Multitenancy\Exceptions\InvalidTenantException;
+use Ollieread\Multitenancy\Middleware\LoadTenant;
 
 /**
  * Class Manager
@@ -37,10 +39,16 @@ class TenantManager
      */
     protected $tenant;
 
+    /**
+     * @var boolean
+     */
+    protected $primary = false;
+
     public function __construct($app)
     {
         $this->app    = $app;
         $this->config = $app['config']['multitenancy'];
+        $this->setConnections((array) $app['config']['multitenancy']['multidatabase']['connection']);
     }
 
     /**
@@ -48,7 +56,7 @@ class TenantManager
      *
      * @return bool
      */
-    public function hasTenant()
+    public function hasTenant(): bool
     {
         return $this->tenant !== null;
     }
@@ -73,8 +81,25 @@ class TenantManager
     public function setTenant($tenant): TenantManager
     {
         $this->tenant = $tenant;
+    }
 
-        return $this;
+    /**
+     * Setup system routes that should belong to a tenant.
+     *
+     * @param \Closure $routes
+     *
+     * @return mixed
+     */
+    public function routes(\Closure $routes)
+    {
+        Route::pattern('_multitenant_', '[a-z0-9.]+');
+
+        return Route::group(
+            [
+                'domain'     => '{_multitenant_}',
+                'middleware' => LoadTenant::class,
+            ],
+            $routes);
     }
 
     /**
@@ -84,7 +109,7 @@ class TenantManager
      *
      * @throws \Ollieread\Multitenancy\Exceptions\InvalidTenantException
      */
-    public function process(Request $request)
+    public function process(Request $request): void
     {
         $identifier = $request->getHost();
 
@@ -99,7 +124,7 @@ class TenantManager
      * @return bool
      * @throws \Ollieread\Multitenancy\Exceptions\InvalidTenantException
      */
-    protected function loadTenant($identifier)
+    protected function loadTenant($identifier): bool
     {
         $this->primary = false;
 
@@ -127,7 +152,7 @@ class TenantManager
      *
      * @return string
      */
-    public function route($name, $parameters = [], $absolute = true)
+    public function route($name, array $parameters = [], $absolute = true): string
     {
         $route = route($name, $parameters, $absolute);
 
@@ -153,7 +178,7 @@ class TenantManager
      *
      * @return string
      */
-    protected function getIdentifier()
+    protected function getIdentifier(): ?string
     {
         if ($domain = $this->tenant->getDomainIdentifier()) {
             return $domain;

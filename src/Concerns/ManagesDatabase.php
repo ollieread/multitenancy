@@ -8,8 +8,6 @@ use Ollieread\Multitenancy\Contracts\Tenant;
 /**
  * Interface ManagesDatabase
  *
- * @method Connection connection()
- *
  * @package Ollieread\Multitenancy\Concerns
  */
 trait ManagesDatabase

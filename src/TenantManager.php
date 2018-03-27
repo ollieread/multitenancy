@@ -124,7 +124,7 @@ class TenantManager
      * @return bool
      * @throws \Ollieread\Multitenancy\Exceptions\InvalidTenantException
      */
-    protected function loadTenant($identifier): bool
+    public function loadTenant($identifier): bool
     {
         $this->primary = false;
 

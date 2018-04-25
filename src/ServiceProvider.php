@@ -42,6 +42,7 @@ class ServiceProvider extends BaseServiceProvider
         });
         // Register the instances with the ioc
         $this->app->instance('multitenancy', $manager);
+        $this->app->instance(TenantManager::class, $manager);
         $this->app->singleton('multitenancy.provider', function ($app) {
             return $app['multitenancy']->provider();
         });

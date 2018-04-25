@@ -81,6 +81,7 @@ class TenantManager
     public function setTenant($tenant): TenantManager
     {
         $this->tenant = $tenant;
+        return $this;
     }
 
     /**
